@@ -1,8 +1,3 @@
-function copyToClipboard(text) {
-  window.prompt("Copy to clipboard: Ctrl+C, Enter", file1);
-}
-
-
 
 // This works on On CLick event of Get Details for a file
 $(document).ready(function () {
@@ -39,17 +34,20 @@ $(document).ready(function () {
 	
 });
 
-
+/**This method will be called on click of Share file. 
+Input Parameters : Filename,Username with whom to be shared, logged In User name
+*/
 $(document).ready(function () {
     $('#ShareFile').click(function () {
         $.ajax({ url: 'updateSharedUsers', type: 'POST', 
-	//	data: JSON.stringify({ filename: $('#filename').val(), username: $('#username').val()}),
-           data: { filename: "rakhi/file1", username: $('#username').val()},
-			//data: [{ filename: $('#filename').val(), username: $('#username').val()}],
-			
+           data: { filename:  document.getElementById("filename").innerHTML, username: $('#username').val(), loggedUserName: document.getElementById("loggedUserName").innerHTML},
             error: function (e, textStatus, errorThrown) {
 				console.log('error is: ' + e.responseText, textStatus, '//', errorThrown);
-				console.log('error occurred');
+				var fileSharingResult = $('#FileSharingResult');
+				add = $('<div class="post"></div>');
+                // SECURITY HOLE: Avoid posting raw HTML from record
+                add.html('<b>Error: </b> ' + e.responseText + '<br />');
+				fileSharingResult.append(add);
             },
             success: function (json) {
 				var jsonData;
@@ -87,8 +85,7 @@ $(document).ready(function () {
 				try{
 					jsonData = JSON.parse(json);
 				} catch(err){
-					console.log("Error parsing json." + err.message);
-					console.log("Error message: " + err.message);	
+					console.log("Error parsing json coming from server: " + err.message);
 				}
 				var sharedUsers = $('#shared_users');
                 var add;

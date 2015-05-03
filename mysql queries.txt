@@ -5,7 +5,16 @@ mysql -u root -p
 
 
 SQL queries
+
+filedetails
+
 1. create table filedetails (fileowner varchar(20) NOT NULL,filename varchar(40) NOT NULL,creationdate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,usersSharedWith varchar(200),fileLink varchar(60) NOT NULL UNIQUE KEY,CONSTRAINT pk_fileID PRIMARY KEY (fileowner,filename));
 2. insert into filedetails (fileowner,filename,usersSharedWith,fileLink) values('rakhi','File1','rakhi;poonam;verma','http://rakhi/File1/1');
 3. insert into filedetails (fileowner,filename,usersSharedWith,fileLink) values('rakhi','File2','roohi','http://rakhi/File2/2');
 4. insert into filedetails (fileowner,filename,fileLink) values('nupur','File1','http://nupur/File1/3');
+
+userinformation
+
+1. create table userinformation(username varchar(20) NOT NULL PRIMARY KEY, password varchar(20) NOT NULL);
+2. Insert into userinformation values('rakhi','bhhookkad');
+3. Insert into userinformation values('poonam','petu');

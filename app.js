@@ -47,7 +47,8 @@ app.post('/fetch',function(req,res){
    		jsonData = { post: [] };
 		var dbSelectStmt = connection.query("SELECT filename, fileowner, creationdate, usersSharedWith FROM filedetails where filename = '" + 	fileName + "' AND fileowner = '" + loggedUserName + "'",function(err, rows, fields){
 				if(err){
-				console.log('Error\n');	
+				console.log('Error in getting details of file\n');	
+				res.status(500).send("Error in getting details of the file" );
 				}
 				else{
 					var row = rows[0];
@@ -60,70 +61,103 @@ app.post('/fetch',function(req,res){
 		});
 }); 
 
+
+/** This will add the users in the table, with whom the file has to be shared
+	request parameter will contain file name, loggedInUser and the name of the user with whom you want to share
+	*/
 app.post('/updateSharedUsers', function (request,response){
 	connection = createNewConnection();
     "use strict";
     var jsonData = request.body;
 	var jsonDataOutput;
 	jsonDataOutput = { post: [] };	
-	filenameToBeUpdated = jsonData.filename;
-	console.log("File to be updated: " + filenameToBeUpdated);
-
-	userList1 = jsonData.username;
-	console.log("Username(s) to be added is: " + userList1);
-	connection.query('SELECT Shared_Users from file_details where filename = "' + filenameToBeUpdated + '"', function(err, rows, fields) {
-  		if (!err){
-   			var userList= rows[0].Shared_Users;
-    		console.log('The existing userList is: ', userList);
-			if(userList == null){
+	
+	fileName = jsonData.filename;
+	loggedInUser = jsonData.loggedUserName;
+	userName = jsonData.username;
+	console.log("File Name is: " + fileName);
+	console.log("LoggedIn user is: " + loggedInUser);
+	console.log("Username with whom you want to share: " + userName);
+	
+	//check if the user with whom you want to share have an account in this application
+	connection.query('SELECT count(*) AS total from userinformation where username = "' + userName + '"' , function(err, rows, fields){
+		if(!err && rows[0].total == 1){
+			console.log("UserName found in database");	
+			connection.query('SELECT usersSharedWith from filedetails where filename = "' + fileName + '" AND fileowner = "' + loggedInUser + '"', function(err, rows, fields){
+							
+  			if (!err){
+   				var userList= rows[0].usersSharedWith;
+    			console.log('The existing userList is: ', userList);
+				if(userList == null || userList == ""){
+				// if no one is in shared list
 				// TODO: Investigate if an entry is required in database for non shared files or not. One way to get details of file is by querying S3
 				//Initially (when file is not shared with anyone) "null" will be written in database for each file.
-				var query = connection.query('update file_details SET Shared_Users = "'+ userList1 +'" where filename = "' + filenameToBeUpdated +'"', 
-				function(err, rows,fields) {
-  				if(err){
-					console.log(err.message);
-					jsonDataOutput.post.push({message: 'error'});
-    			}else{
-     				 console.log('successfully added the first user.');
-					 jsonDataOutput.post.push({message: 'successfully added the first user.'});
+					var query = connection.query('update filedetails SET usersSharedWith = ";'+ userName +'" where filename = "' + fileName +'" AND fileowner = "' + loggedInUser + '"' , 	function(err, rows,fields) {
+									
+  						if(err){
+							console.log("Error in updating first shared user for the file: " + fileName + " " + err.message);
+							response.status(500).send('Error in updating first shared user for the file');
+    					}else{
+     						console.log('successfully added the first shared user for the file ' + fileName);
+							jsonDataOutput.post.push({message:'successfully added the first shared user.'});
+					 		response.status(200).send(JSON.stringify(jsonDataOutput));
+						}
+					});
+				}else{
+				// already there are some users in the shared list
+					pattern1 = ';' + userName + ';' ;
+					pattern2 = userName + ';' ;
+					pattern3 = ';' + userName;
+					
+					if(userList.indexOf(pattern1) > -1 || userList.indexOf(pattern2) > -1 || userList.indexOf(pattern3) > -1) {
+						console.log('User already exists in shared list of users');
+						response.status(500).send("User already exists in shared list of users");
+					}else{
+						userList1 = userList + pattern3;
+						var query = connection.query('update filedetails SET usersSharedWith = "'+ userList1 +'" where filename = "' + fileName +'" AND fileowner = "' + loggedInUser + '"', function(err, rows,fields) {
+										console.log("This is being printed in update file details else method.");
+  						if(err){
+							console.log("Error while adding a user in the existing shared list of users " + err.message);
+							response.status(500).send('Error while adding a user in the existing shared list of users');
+    					}else{
+     						console.log('successfully added username to existing shared list users');
+							jsonDataOutput.post.push({message:'successfully added username to existing shared list users'});
+							//response.write(JSON.stringify(jsonDataOutput));
+							//response.end();	
+							response.status(200).send(JSON.stringify(jsonDataOutput));	
+									
+						}
+						});
+					}
 				}
-				});
-		
-			}else{
-			pattern1 = ';' + userList1 + ';' ;
-			pattern2 = userList1 + ';' ;
-			pattern3 = ';' + userList1;
-		if(userList.indexOf(pattern1) > -1 || userList.indexOf(pattern2) > -1 || userList.indexOf(pattern3) > -1) {
-			console.log("Pattern1: " + userList.indexOf(pattern1) + "Pattern2: " + userList.indexOf(pattern2)  + " Pattern3: " + userList.indexOf(pattern3));
-			console.log('User already exists');
-			jsonDataOutput.post.push({message: 'User already exists'});
-		}else{
-			console.log('No Match found');
-			userList1 = userList + pattern3;
-			var query = connection.query('update file_details SET Shared_Users = "'+ userList1 +'" where filename = "' + filenameToBeUpdated +'"', 
-			function(err, rows,fields) {
-  			if(err){
-				console.log(err.message);
-				jsonDataOutput.post.push({message: 'error'});
-    		}else{
-     			console.log('successfully added username to existing users');
-				jsonDataOutput.post.push({message: 'successfully added username to existing users'});	
+				//console.log(JSON.stringify(jsonDataOutput));
+       			//response.write(JSON.stringify(jsonDataOutput));
+				//connection.end();
+        		//response.end();			
 			}
-		});
-		}
-			
-	}
-		console.log(JSON.stringify(jsonDataOutput));
-       		response.write(JSON.stringify(jsonDataOutput));
-			debugger;
-			connection.end();
-        	response.end();			
-	}
-  else
-    console.log('Error while performing Query.');
-});	
+  			else{
+    			console.log('Error while getting existing list of shared users for file: ' + fileName);
+			}
+			//connection.end();
+        	//response.end();	
+	});	
 
+		}else{
+			if(err){
+				console.log("Error occured while checking if the shared user has account: " + err.message);
+				response.status(500).send("Error while checking if the shared user has account");
+				connection.end();
+        		response.end();	
+			}else{
+				console.log("Username " + userName + " don't have account in application");	
+				response.status(404).send( "Username " + userName + " don't have account in application" );
+				connection.end();
+        		response.end();	
+			}	
+		}
+	});
 });
+
 
 /** This will fetch the link of a particular file
 	req parameter will contain logged User Name and the filename for which the details are to be fetched
@@ -144,6 +178,7 @@ app.post('/fetchLink',function(req,res){
 		var dbSelectStmt = connection.query("SELECT fileLink FROM filedetails where filename = '" + 	fileName + "' AND fileowner = '" + loggedUserName + "'",function(err, rows, fields){
 				if(err){
 				console.log('Error while getting Link of a file ' + fileName + '\n' );	
+				res.status(500).send({ message: "Error in getting link of the file" });
 				}
 				else{
 					var row = rows[0];
