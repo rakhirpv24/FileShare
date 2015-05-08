@@ -3,6 +3,7 @@ var http = require('http');
 var url = require('url');
 var path = require('path');
 var querystring = require('querystring');
+var crypto = require('crypto')
 var mysql = require('mysql');
 var fs = require('fs');
 var bodyParser = require("body-parser");
@@ -190,3 +191,34 @@ app.post('/fetchLink',function(req,res){
 				}	
 		});
 }); 
+
+
+
+/** This will generate unique URL of a particular file
+	req parameter will contain logged User Name and the filename for which the details are to be fetched
+	*/
+app.post('/generateUrl',function(req,res){
+	 	console.log('doing generate URL');
+	 
+		var jsonDataInput = req.body;
+		var fileName = jsonDataInput.filename;
+		var loggedUserName = jsonDataInput.loggedUserName;
+		var identityString = loggedUserName + fileName;
+		console.log('Logged User: ' + loggedUserName + ' filename : ' + fileName);
+	
+    	var jsonData;
+   		jsonData = { post: [] };
+		
+		
+	var shasum = crypto.createHash('sha1');
+	shasum.update(identityString);
+	var hashString = shasum.digest('hex')
+	console.log(hashString);
+					
+	jsonData.post.push({ url : hashString});
+	res.write(JSON.stringify(jsonData));
+	res.end();
+					
+}); 
+
+

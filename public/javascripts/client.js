@@ -1,7 +1,6 @@
 
 // This works on On CLick event of Get Details for a file
 $(document).ready(function () {
-    //$('#fileshare').submit(function () {
 		$('#GetDetails').click(function () {
         $.ajax({ url: 'fetch', type: 'POST',
             data: { filename: document.getElementById("nameOfFile").innerHTML,loggedUserName: document.getElementById("loggedUserName").innerHTML },
@@ -99,4 +98,35 @@ $(document).ready(function () {
     });
 	
 });
+
+// This works on On CLick event of Generate Unique URL for a file
+$(document).ready(function () {
+    //$('#fileshare').submit(function () {
+		$('#GenerateURL').click(function () {
+        $.ajax({ url: 'generateUrl', type: 'POST',
+            data: { filename: document.getElementById("nameOfFile").innerHTML,loggedUserName: document.getElementById("loggedUserName").innerHTML },
+            error: function (e, textStatus, errorThrown) {
+                console.log('error is: ' + e.responseText, textStatus, '//', errorThrown);
+				cosole.log('error occurred');
+            },
+            success: function (json) {
+				var jsonData;
+				try{
+					jsonData = JSON.parse(json);
+				} catch(err){
+					console.log("Error parsing json coming from server: " + err.message);
+				}
+				var sharedUsers = $('#shared_users');
+                var add;
+                add = $('<div class="post"></div>');
+                // SECURITY HOLE: Avoid posting raw HTML from record
+                add.html('<b>URL: </b> ' + jsonData.post[0].url + '<br />');
+					console.log(add);
+				sharedUsers.append(add);
+            }});
+			return false;
+    });
+	
+});
+
 
